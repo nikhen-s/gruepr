@@ -14,4 +14,4 @@ LMS/canvasScopes.txt
 Brandbook-Gruepr.pdf
 hecvatlite305.xlsx
 build/*
-docs/*
+docs/**

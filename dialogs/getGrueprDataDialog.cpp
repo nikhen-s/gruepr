@@ -253,16 +253,59 @@ bool GetGrueprDataDialog::loadDataFromFile(const QString &filePath){
     dataOptions->dataSourceName = dataFileLocation.fileName();
     const int h = ui->dataSourceLabel->height();
     ui->dataSourceIcon->setPixmap(icon.scaledToHeight(h, Qt::SmoothTransformation));
-
+    ui->dragAndDropWidget->setVisible(false);
     return true;
 }
 
 void GetGrueprDataDialog::handleDrop(const QString &filePathString){
-
-    if (loadDataFromFile(filePathString)){
-        qDebug() << "File loaded successfully" << filePathString;
-    } else {
+    dataOptions = new DataOptions;
+    surveyFile = new CsvFile;
+    qDebug() << "File being loaded" << filePathString;
+    bool loadCSVSuccess = surveyFile->openExistingFile(filePathString);
+    if(!loadCSVSuccess) {
         QMessageBox::critical(this, tr("Error"), tr("Failed to load file: %1").arg(filePathString));
+        //redo somehow
+    } else {
+        //update the UI if successful!
+        loadDataFromFile(filePathString);
+        QSettings savedSettings;
+        savedSettings.setValue("saveFileLocation", filePathString); //save the filepath in system
+        //Update dataOptions and data source.
+
+
+        QFileInfo fileInfo(filePathString);
+        dataOptions->dataSource = DataOptions::DataSource::fromFile; //Update
+        dataOptions->dataSourceName = fileInfo.fileName(); //fileName
+        dataOptions->saveStateFileName = fileInfo.canonicalFilePath(); //Canonical Filepath
+        qDebug() << "File loaded successfully" << filePathString;
+
+        //refactor this:
+
+        ui->sourceFrame->setStyleSheet("QFrame {background-color: white; color: " DEEPWATERHEX "; padding: 10px; border: none;}" +
+                                       QString(RADIOBUTTONSTYLE).replace("font-size: 10pt;", "font-size: 12pt; color: " DEEPWATERHEX ";"));
+        ui->loadDataPushButton->setStyleSheet("QPushButton {background-color: white; color: " DEEPWATERHEX "; font-family:'DM Sans'; font-size: 12pt; "
+                                              "border-style: solid; border-width: 2px; border-radius: 5px; border-color: " DEEPWATERHEX "; padding: 10px;}");
+        const QPixmap uploadIcon(":/icons_new/upload_file.png");
+        const int h = ui->loadDataPushButton->height();
+        ui->loadDataPushButton->setIcon(uploadIcon.scaledToHeight(h, Qt::SmoothTransformation));
+        ui->dataSourceFrame->setEnabled(true);
+        ui->dataSourceIcon->setEnabled(true);
+        ui->dataSourceLabel->setEnabled(true);
+        ui->dataSourceLabel->setText(tr("Data source: ") + dataOptions->dataSourceName);
+        ui->hLine->setEnabled(true);
+        ui->fieldsExplainer->setEnabled(true);
+        ui->headerRowCheckBox->setEnabled(true);
+        ui->tableWidget->setEnabled(true);
+        ui->tableWidget->horizontalHeader()->setStyleSheet("QHeaderView::section {background-color: " OPENWATERHEX "; color: white; padding: 5px; "
+                                                           "border-top: none; border-bottom: none; border-left: none; "
+                                                           "border-right: 1px solid white; "
+                                                           "font-family: 'DM Sans'; font-size: 12pt;}");
+        ui->tableWidget->setStyleSheet("QTableView{background-color: white; alternate-background-color: lightGray; border: none;}"
+                                       "QTableView::item{border-top: none; border-bottom: none; border-left: none; border-right: 1px solid darkGray; padding: 3px;}" +
+                                       QString(SCROLLBARSTYLE).replace(DEEPWATERHEX, OPENWATERHEX));
+
+        ui->confirmCancelButtonBox->button(QDialogButtonBox::Ok)->setEnabled(true);
+        return;
     }
 }
 
@@ -270,19 +313,20 @@ void GetGrueprDataDialog::handleDrop(const QString &filePathString){
 bool GetGrueprDataDialog::getFromFile()
 {
 
+    const QPixmap icon(":/icons_new/file.png");
+
     QSettings savedSettings;
     QFileInfo dataFileLocation;
     dataFileLocation.setFile(savedSettings.value("saveFileLocation", "").toString());
 
-    QString filePath = QFileDialog::getOpenFileName(this, tr("Open Survey Data File"), dataFileLocation.canonicalPath(), tr("Survey Data (*.csv *.txt)"));
+    QString filePath = dataFileLocation.canonicalPath();
+
     if(!surveyFile->open(this, CsvFile::Operation::read, tr("Open Survey Data File"), dataFileLocation.canonicalPath(), tr("Survey Data"))) {
-        return false;
-    }
-    if (filePath.isEmpty()){
         return false;
     }
 
     savedSettings.setValue("saveFileLocation", surveyFile->fileInfo().canonicalFilePath());
+
     return loadDataFromFile(filePath);
 }
 

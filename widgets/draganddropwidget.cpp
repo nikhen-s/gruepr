@@ -25,7 +25,7 @@ void DragAndDropWidget::dropEvent(QDropEvent *event)
     QString filePathString;
 
     foreach (const QUrl &url, urls){
-        filePathString += url.toLocalFile() + ";";
+        filePathString += url.toLocalFile();
     }
     emit itemDropped(filePathString);
     qDebug() << "Dropped url" << filePathString;
