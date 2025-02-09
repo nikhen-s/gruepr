@@ -1,4 +1,5 @@
 #include "getGrueprDataDialog.h"
+#include "qevent.h"
 #include "ui_getGrueprDataDialog.h"
 #include "LMS/canvashandler.h"
 #include "LMS/googlehandler.h"
@@ -17,6 +18,9 @@
 #include <QStandardItemModel>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QMimeData>
+#include <QFileDialog>
+#include "widgets/draganddropwidget.h"
 
 GetGrueprDataDialog::GetGrueprDataDialog(StartDialog *parent) :
     QDialog(parent),
@@ -55,7 +59,12 @@ GetGrueprDataDialog::GetGrueprDataDialog(StartDialog *parent) :
                                    QString(RADIOBUTTONSTYLE).replace("font-size: 10pt;", "font-size: 12pt; color: white;"));
     ui->prevWorkComboBox->setStyleSheet(COMBOBOXSTYLE);
     ui->prevWorkComboBox->hide();
+
+    ui->dragAndDropWidget->hide();
     connect(ui->fromPrevWorkRadioButton, &QRadioButton::toggled, ui->prevWorkComboBox, &QComboBox::setVisible);
+    connect(ui->fromFileRadioButton, &QRadioButton::toggled, ui->dragAndDropWidget, &QWidget::setVisible);
+
+    connect(ui->dragAndDropWidget, &DragAndDropWidget::itemDropped, this, &GetGrueprDataDialog::handleDrop);
     ui->loadDataPushButton->setStyleSheet("QPushButton {background-color: " OPENWATERHEX "; color: white; font-family:'DM Sans'; font-size: 12pt; "
                                           "border-style: solid; border-width: 2px; border-radius: 5px; border-color: white; padding: 10px;}");
     ui->sourceButtonGroup->setId(ui->fromFileRadioButton, static_cast<int>(DataOptions::DataSource::fromFile));
@@ -233,25 +242,48 @@ void GetGrueprDataDialog::loadData()
     ui->confirmCancelButtonBox->button(QDialogButtonBox::Ok)->setEnabled(true);
 }
 
+
+
+bool GetGrueprDataDialog::loadDataFromFile(const QString &filePath){
+    const QPixmap icon(":/icons_new/file.png");
+    QFileInfo dataFileLocation(filePath);
+
+    source = DataOptions::DataSource::fromFile;
+    dataOptions->dataSource = source;
+    dataOptions->dataSourceName = dataFileLocation.fileName();
+    const int h = ui->dataSourceLabel->height();
+    ui->dataSourceIcon->setPixmap(icon.scaledToHeight(h, Qt::SmoothTransformation));
+
+    return true;
+}
+
+void GetGrueprDataDialog::handleDrop(const QString &filePathString){
+
+    if (loadDataFromFile(filePathString)){
+        qDebug() << "File loaded successfully" << filePathString;
+    } else {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to load file: %1").arg(filePathString));
+    }
+}
+
+
 bool GetGrueprDataDialog::getFromFile()
 {
-    const QPixmap icon(":/icons_new/file.png");
 
     QSettings savedSettings;
     QFileInfo dataFileLocation;
     dataFileLocation.setFile(savedSettings.value("saveFileLocation", "").toString());
 
+    QString filePath = QFileDialog::getOpenFileName(this, tr("Open Survey Data File"), dataFileLocation.canonicalPath(), tr("Survey Data (*.csv *.txt)"));
     if(!surveyFile->open(this, CsvFile::Operation::read, tr("Open Survey Data File"), dataFileLocation.canonicalPath(), tr("Survey Data"))) {
+        return false;
+    }
+    if (filePath.isEmpty()){
         return false;
     }
 
     savedSettings.setValue("saveFileLocation", surveyFile->fileInfo().canonicalFilePath());
-    source = DataOptions::DataSource::fromFile;
-    dataOptions->dataSource = source;
-    dataOptions->dataSourceName = surveyFile->fileInfo().fileName();
-    const int h = ui->dataSourceLabel->height();
-    ui->dataSourceIcon->setPixmap(icon.scaledToHeight(h, Qt::SmoothTransformation));
-    return true;
+    return loadDataFromFile(filePath);
 }
 
 bool GetGrueprDataDialog::getFromGoogle()

@@ -75,7 +75,7 @@ StartDialog::StartDialog(QWidget *parent)
     grueprButton->setIcon(QIcon(":/icons_new/formTeams.png"));
     grueprButton->setIconSize(ICONSIZE);
     grueprButton->setFont(labelFont);
-    grueprButton->setText(tr("Use the survey results\nto form your grueps."));
+    grueprButton->setText(tr("Import survey or CSV data \nto create groups."));
     grueprButton->setStyleSheet(STARTDIALODBUTTONSTYLE);
     connect(grueprButton, &QToolButton::clicked, this, &StartDialog::openGruepr);
     theGrid->addWidget(grueprButton, row++, col++, 1, 1, Qt::AlignRight);

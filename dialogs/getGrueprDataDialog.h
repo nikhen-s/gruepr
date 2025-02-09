@@ -28,6 +28,7 @@ public:
 
 public slots:
     void accept() override;
+    void handleDrop(const QString &filePathString);
 
 private:
     Ui::GetGrueprDataDialog *ui;
@@ -39,6 +40,7 @@ private:
 
     void loadData();
     CsvFile *surveyFile = nullptr;
+    bool loadDataFromFile(const QString &filePath);
     bool getFromFile();
     bool getFromGoogle();
     bool getFromCanvas();
